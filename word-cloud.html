@@ -1,0 +1,201 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Word Cloud</title>
+    <link rel="stylesheet" type="text/css" href="word-cloud.css">
+    <script src="./lib/d3/d3.js" charset="utf-8"></script>
+    <script src="./lib/d3/d3.layout.cloud.js"></script>
+    <script src="./lib/d3/d3.wordcloud.js"></script>
+    <script src="./lib/d3/d3.wordcloud.ny.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+  </head>
+  <body>
+     <h1>Word Cloud</h1>
+     <div style="margin-bottom: 30px;">
+      <div id="NYOutput">
+        <div id='wordcloudNY'></div>
+        <div class="text">NY Times</div>
+      </div>
+      <div id="TwitterOutput">
+        <div id='wordcloudTwitter'></div>
+        <div class="text">Twitter</div>
+      </div>
+     </div>
+     <div>      
+      <div>
+        <input id="input-data-value" type="" name="">
+      </div>
+      <div>
+        <button onclick="compareInputData()">DISPLAY</button>
+      </div>
+     </div>
+      
+
+    <script> 
+      document.getElementById("NYOutput").style.display = 'none';
+      document.getElementById("TwitterOutput").style.display = 'none';
+
+      function compare(a,b){
+        const countA = a.count;
+        const countB = b.count;
+
+        let comparison = 0;
+        if(countA < countB){
+          comparison = 1;
+        }else if(countA > countB){
+          comparison = -1;
+        }
+
+        return comparison;
+      }
+      const readFiles = {
+        nyFileName : '',
+        twitterFileName : ''
+      }
+
+      var filterSize = 15;
+
+      function compareInputData(){
+        document.getElementById("NYOutput").style.display = 'none';
+        document.getElementById("TwitterOutput").style.display = 'none';
+        filterSize = 16;
+
+        var inputValue = document.getElementById("input-data-value").value;
+        if(inputValue.toLowerCase() == 'basket ball'){
+          readFiles.nyFileName = 'ny_outputs/ny-basketball.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-basketball.out';
+        }else if(inputValue.toLowerCase() == 'buffalo bulls'){
+          readFiles.nyFileName = 'ny_outputs/ny-buffalo-bulls.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-buffalo-bulls.out';
+        }else if(inputValue.toLowerCase() == 'march madness'){
+          readFiles.nyFileName = 'ny_outputs/ny-march-madness.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-march-madness.out';
+        }else if(inputValue.toLowerCase() == 'ncaa'){
+          readFiles.nyFileName = 'ny_outputs/ny-ncaa.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-ncaa.out';
+        }else if(inputValue.toLowerCase() == 'bi ncaa'){
+          filterSize = 11;
+          readFiles.nyFileName = 'ny_outputs/ny-ncaa-bigram.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-ncaa-bigram.out';
+        }else if(inputValue.toLowerCase() == 'bi march madness'){
+          filterSize = 11;
+          readFiles.nyFileName = 'ny_outputs/ny-march-madness-bigram.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-march-madness-bigram.out';
+        }else if(inputValue.toLowerCase() == 'bi buffalo bulls'){
+          filterSize = 11;
+          readFiles.nyFileName = 'ny_outputs/ny-buffalo-bulls-bigram.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-buffalo-bulls-bigram.out';
+        }else if(inputValue.toLowerCase() == 'bi basket ball'){
+          filterSize = 11;
+          readFiles.nyFileName = 'ny_outputs/ny-basketball-bigram.out';
+          readFiles.twitterFileName = 'twitter_outputs/twitter-basketball-bigram.out';
+        }
+        fetchData();
+      }
+
+
+
+      function fetchData(){
+
+          //Fetch NY Data
+              function loadNYJSON(callback) {       
+                var xobj = new XMLHttpRequest();
+                xobj.overrideMimeType("text/plain");
+                xobj.open('GET',  readFiles.nyFileName, true);
+                xobj.onreadystatechange = function() {
+                    if (xobj.readyState == 3) {
+                        callback(xobj.responseText);
+                    }
+                }
+                xobj.send(null);       
+          };
+
+          // Call to function with anonymous callback
+          loadNYJSON(function(response) {
+              if(response){ 
+                var example = '';                              
+                var results = [];                
+                var wor = [];
+
+                example = JSON.stringify(response);
+                var ex = example.slice(1,example.length-1);
+                var coordinates = ex.split( "\\n" );  
+
+                for( var i = 0; i < coordinates.length; ++i ) {
+                  var temp = coordinates[ i ].split( "\\t" );
+                  var res = {
+                    "text" : temp[0],
+                    "count" : temp[1]
+                  }
+                  if(temp[1]){
+                    results.push(res);
+                  }                  
+                }
+                results.sort(compare);
+                wor = (results.slice(0,filterSize));
+                document.getElementById("NYOutput").style.display = 'inline-block';
+                console.log("NY words ===" + JSON.stringify(wor));
+                d3.select("#wordcloudNY").select("svg").remove();
+                 d3.wordcloudNY()
+                            .size([600, 1100])
+                            .fill(d3.scale.ordinal().range(["#884400", "#448800", "#888800", "#444400"]))
+                            .words(wor)
+                            .start();
+              }
+          });
+
+
+          //Fetch Twitter Data
+              function loadTwitterJSON(callback) {       
+                var xobj = new XMLHttpRequest();
+                xobj.overrideMimeType("text/plain");
+                xobj.open('GET', readFiles.twitterFileName , true);
+                xobj.onreadystatechange = function() {
+                    if (xobj.readyState == 3) {
+                        callback(xobj.responseText);
+                    }
+                }
+                xobj.send(null);       
+          };
+
+          // Call to function with anonymous callback
+          loadTwitterJSON(function(response) {
+              if(response){ 
+                var example = '';                              
+                var results = [];                
+                var wor = [];
+
+                example = JSON.stringify(response);
+                var ex = example.slice(1,example.length-1);
+                var coordinates = ex.split( "\\n" );
+
+                for( var i = 0; i < coordinates.length; ++i ) {
+                  var temp = coordinates[ i ].split( "\\t" );
+                  var res = {
+                    "text" : temp[0],
+                    "count" : temp[1]
+                  }
+                  if(temp[1]){
+                    results.push(res);
+                  }                  
+                }
+                results.sort(compare);
+                wor = (results.slice(0,filterSize));                
+                console.log("Twitter words ===" +  JSON.stringify(wor));
+                document.getElementById("TwitterOutput").style.display = 'inline-block';
+                d3.select("#wordcloudTwitter").select("svg").remove();
+                d3.wordcloud()
+                            .size([600, 1100])
+                            .fill(d3.scale.ordinal().range(["#884400", "#448800", "#888800", "#444400"]))
+                            .words(wor)
+                            .start();
+              }
+          });
+      }
+     
+       
+    </script>
+  </body>
+</html>
+
